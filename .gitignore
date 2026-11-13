@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+
+# ROS 2 & colcon
+install/
+build/
+log/
+
+# Large model firmware files (do not commit .rpk to git)
+*.rpk
+*.pt
+*.onnx
+
+# Images and local test artifacts
+*.jpg
+*.jpeg
+*.png
+!docs/images/*.png
+!docs/images/*.jpg
+!docs/images/*.gif
+
+# OS & Editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Local env
+.env
+.env.local
+

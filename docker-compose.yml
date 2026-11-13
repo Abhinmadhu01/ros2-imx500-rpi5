@@ -1,0 +1,58 @@
+# =============================================================================
+# docker-compose.yml — ros2-imx500-rpi5
+# =============================================================================
+# NOTE ON DEVICE ACCESS
+# ---------------------
+# The cgroup rules below use STATIC device majors.  On Raspberry Pi OS the
+# actual majors for video4linux, media, and dma_heap are assigned DYNAMICALLY
+# and can vary across kernel versions (e.g. media can be 235 or 510).
+#
+# If the camera is not detected, run the companion `run.sh` script instead —
+# it reads /proc/devices at launch time and builds the correct rules.
+#
+# Alternatively, update the numbers below by running:
+#   awk '$2=="video4linux" || $2=="media" || $2=="dma_heap" {print $2, $1}' /proc/devices
+#
+# Usage:
+#   docker compose up ros2-imx500          # base image
+#   docker compose run --rm ros2-imx500 bash
+#   docker compose run --rm ros2-imx500-full python3 my_script.py
+# =============================================================================
+
+x-common: &common
+  network_mode: host
+  stdin_open: true
+  tty: true
+  security_opt:
+    - systempaths=unconfined        # access /sys/firmware/devicetree
+  volumes:
+    - /dev:/dev
+    - /run/udev:/run/udev:ro
+  # Static cgroup rules — adjust device majors for your kernel (see note above)
+  device_cgroup_rules:
+    - "c 81:* rmw"                  # video4linux  (usually 81)
+    - "c 235:* rmw"                 # media        (235 or 510 — check your kernel)
+    - "c 261:* rmw"                 # dma_heap     (commonly 261)
+  environment:
+    - DISPLAY=${DISPLAY:-:0}
+
+services:
+  # ---------- Base image (slim — no torch/scipy/MAVProxy) ----------
+  ros2-imx500:
+    <<: *common
+    image: ros2-imx500-rpi5:base
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: base
+    container_name: ros2-imx500
+
+  # ---------- Full image (torch + ultralytics + MAVProxy + scipy) ----------
+  ros2-imx500-full:
+    <<: *common
+    image: ros2-imx500-rpi5:full
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: full
+    container_name: ros2-imx500-full
