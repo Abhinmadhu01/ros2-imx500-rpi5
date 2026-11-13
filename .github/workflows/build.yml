@@ -52,6 +52,19 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      # Build & Push UAV Image (with MAVROS, AprilTag, GStreamer stack)
+      - name: Build and push UAV image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          target: uav
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:uav
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
       # Build & Push Full Image (with PyTorch, MAVProxy, Ultralytics)
       - name: Build and push Full image
         uses: docker/build-push-action@v5

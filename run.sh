@@ -14,9 +14,19 @@
 # =============================================================================
 set -euo pipefail
 
-IMAGE="${IMAGE:-ros2-imx500-rpi5:base}"
 DOCKER=docker
 docker info >/dev/null 2>&1 || DOCKER="sudo docker"
+
+DEFAULT_IMAGE="ghcr.io/abhinmadhu01/ros2-imx500-rpi5:base"
+LOCAL_IMAGE="ros2-imx500-rpi5:base"
+
+if [ -z "${IMAGE:-}" ]; then
+  if $DOCKER image inspect "$LOCAL_IMAGE" >/dev/null 2>&1; then
+    IMAGE="$LOCAL_IMAGE"
+  else
+    IMAGE="$DEFAULT_IMAGE"
+  fi
+fi
 
 # Device majors for media and dma_heap are assigned dynamically; read them now.
 rules=()

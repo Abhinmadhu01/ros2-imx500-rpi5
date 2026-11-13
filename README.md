@@ -76,14 +76,13 @@ This project bridges the gap:
 ## ⚡ Features
 
 - **Full IMX500 camera access** — 12 MP capture, on-chip AI inference, sensor metadata readback
-- **Pre-built ML stack** — PyTorch (CPU), ONNX Runtime, Ultralytics YOLO, scipy, polars
-- **ROS2 Humble** with MAVROS, cv_bridge, vision_msgs, camera_ros, apriltag_ros, v4l2_camera
+- **Pre-built ML & UAV stack** — PyTorch (CPU), ONNX Runtime, Ultralytics YOLO, MAVROS, AprilTag
+- **ROS2 Humble** with cv_bridge, vision_msgs, camera_info_manager, image_geometry, colcon (in `base`), and MAVROS / AprilTag (in `uav`)
 - **GStreamer pipeline support** — full plugin set for RTMP, HLS, and custom pipelines
 - **Non-root execution** — runs as `ros` user (UID 1000) with `video`, `dialout`, and `audio` group access
 - **Proper DMA heap handling** — entrypoint creates the `vidbuf_cached` symlink for reliable buffer allocation
-- **Dynamic device-major detection** — cgroup rules work across kernel versions where major numbers shift
-- **Health check built in** — Docker `HEALTHCHECK` verifies `picamera2` import every 60 s
-- **colcon build tools** — develop your own ROS2 packages inside the container
+- **Dynamic device-major detection** — `run.sh` inspects `/proc/devices` so cgroup rules work across kernel versions automatically
+- **colcon build tools** — develop and build your own ROS2 packages inside the container
 
 ---
 
@@ -119,13 +118,13 @@ flowchart TD
 
 ```bash
 # 1. Clone the repo
-git clone https://github.com/<username>/ros2-imx500-rpi5.git
+git clone https://github.com/Abhinmadhu01/ros2-imx500-rpi5.git
 cd ros2-imx500-rpi5
 
-# 2. Build the image
-docker build -t ros2-imx500-rpi5:humble .
+# 2. Build the base image (or uav / full)
+docker build --target base -t ros2-imx500-rpi5:base .
 
-# 3. Run (see "Running the Container" for full flag reference)
+# 3. Run (run.sh dynamically maps camera devices and handles cgroups)
 ./run.sh bash
 
 # 4. Inside the container — verify camera access
@@ -181,27 +180,21 @@ Before running the container, verify your host kernel, CSI detection, and permis
 ## 🔨 Building Locally
 
 ```bash
-# Standard build (~6 GB, includes PyTorch, Ultralytics, MAVROS, VTK, scipy)
-docker build -t ros2-imx500-rpi5:humble .
-```
-
-<details>
-<summary><strong>Multi-stage build targets (if using the multi-stage Dockerfile)</strong></summary>
-
-```bash
-# Base image — slim (~2.5 GB)
+# Base image — slim (2.33 GB disk / 558 MB download)
 docker build --target base -t ros2-imx500-rpi5:base .
 
-# Full image — everything (~6 GB)
+# UAV image — drone & streaming stack (2.70 GB disk / 637 MB download)
+docker build --target uav -t ros2-imx500-rpi5:uav .
+
+# Full image — everything (~6.1 GB disk / ~1.38 GB download)
 docker build --target full -t ros2-imx500-rpi5:full .
 ```
 
-| Target | Contents | Approx. Size |
-|--------|----------|-------------|
-| `base` | ROS2 + libcamera + picamera2 + OpenCV + ONNX Runtime | ~2.5 GB |
-| `full` | Everything in base + PyTorch, Ultralytics, MAVROS, VTK, scipy | ~6 GB |
-
-</details>
+| Target | Contents | Disk Usage | Content Size |
+|---|---|---|---|
+| `base` | ROS 2 Humble + libcamera (source) + picamera2 + OpenCV + colcon + cv_bridge | **2.33 GB** | **558 MB** |
+| `uav` | Everything in `base` + MAVROS, AprilTag, GStreamer RTMP streaming, GUI tools | **2.70 GB** | **637 MB** |
+| `full` | Everything in `uav` + PyTorch (CPU), Ultralytics, MAVProxy, compilers | ~6.1 GB | ~1.38 GB |
 
 > [!TIP]
 > The build runs on aarch64 and takes **30–60 minutes** on a Pi 5 (most of the time is the libcamera source build). Use `DOCKER_BUILDKIT=1` for faster layer caching on rebuilds.
@@ -301,17 +294,19 @@ docker compose exec ros2-imx500 bash
 
 ---
 
-## 🏷 Image Tags
+## 🏷 Image Targets & Tags
 
-| Tag | Contents | Size |
-|-----|----------|------|
-| `base` / `humble` | ROS2 Humble + libcamera (RPi fork) + picamera2 + OpenCV 4.5.4 + ONNX Runtime | ~2.5 GB |
-| `full` | Everything in `base` + PyTorch (CPU), Ultralytics, MAVROS, MAVProxy, VTK, scipy | ~6 GB |
+| Target | Tags | Contents | Disk Size | Compressed Size |
+|---|---|---|---|---|
+| `base` | `base`, `humble`, `latest` | ROS2 Humble + libcamera (RPi fork) + picamera2 + OpenCV (apt) + cv_bridge + vision_msgs + colcon | **2.33 GB** | **558 MB** |
+| `uav` | `uav` | Everything in `base` + MAVROS, AprilTag, GStreamer streaming stack (RTMP), GUI / X11 tools | **2.70 GB** | **637 MB** |
+| `full` | `full` | Everything in `uav` + PyTorch (CPU), Ultralytics (AGPL-3.0), ONNX Runtime, MAVProxy, compilers | ~6.1 GB | ~1.38 GB |
 
 ```bash
-# Pull from Docker Hub
-docker pull <username>/ros2-imx500-rpi5:humble
-docker pull <username>/ros2-imx500-rpi5:full
+# Pull pre-built images from GitHub Container Registry
+docker pull ghcr.io/abhinmadhu01/ros2-imx500-rpi5:base
+docker pull ghcr.io/abhinmadhu01/ros2-imx500-rpi5:uav
+docker pull ghcr.io/abhinmadhu01/ros2-imx500-rpi5:full
 ```
 
 ---
@@ -320,22 +315,21 @@ docker pull <username>/ros2-imx500-rpi5:full
 
 All packages are from the official `ros-humble-*` apt repository:
 
-| Package | Purpose |
-|---------|---------|
-| `ros-humble-mavros` | MAVLink ↔ ROS2 bridge for autopilots |
-| `ros-humble-mavros-extras` | Additional MAVROS plugins (GPS, vision pose, etc.) |
-| `ros-humble-v4l2-camera` | V4L2 camera driver node |
-| `ros-humble-usb-cam` | USB camera driver node |
-| `ros-humble-image-transport-plugins` | Compressed / theora image transport |
-| `ros-humble-cv-bridge` | OpenCV ↔ ROS2 image conversion |
-| `ros-humble-camera-info-manager` | Camera calibration YAML loader |
-| `ros-humble-image-geometry` | Pinhole camera model utilities |
-| `ros-humble-apriltag-ros` | AprilTag fiducial detection |
-| `ros-humble-camera-ros` | Generic libcamera-based camera node |
-| `ros-humble-camera-calibration` | Monocular/stereo camera calibration tool |
-| `ros-humble-vision-msgs` | Standard detection/classification message types |
+| Target | Package | Purpose |
+|---|---|---|
+| **base** | `ros-humble-cv-bridge` | OpenCV ↔ ROS2 image conversion |
+| **base** | `ros-humble-vision-msgs` | Standard detection/classification message types |
+| **base** | `ros-humble-camera-info-manager` | Camera calibration YAML loader |
+| **base** | `ros-humble-image-geometry` | Pinhole camera model utilities |
+| **base** | `ros-humble-image-transport-plugins` | Compressed / theora image transport |
+| **base** | `ros-humble-camera-calibration` | Monocular/stereo camera calibration tool |
+| **uav** | `ros-humble-mavros` | MAVLink ↔ ROS2 bridge for autopilots |
+| **uav** | `ros-humble-mavros-extras` | Additional MAVROS plugins (GPS, vision pose, etc.) |
+| **uav** | `ros-humble-apriltag-ros` | AprilTag fiducial detection |
+| **uav** | `ros-humble-v4l2-camera` | V4L2 camera driver node |
+| **uav** | `ros-humble-usb-cam` | USB camera driver node |
 
-**Build tools:** `python3-colcon-common-extensions`, `python3-colcon-mixin`, `python3-rosdep`, `python3-vcstool`
+**Build tools (in all images):** `python3-colcon-common-extensions`, `python3-colcon-mixin`, `python3-rosdep`, `python3-vcstool`
 
 ---
 
@@ -349,12 +343,12 @@ Tested on Raspberry Pi 5 Model B Rev 1.1 (Debian 13 Trixie host, Ubuntu 22.04 co
 | **On-Chip Inference** | **15.0 fps** | **7.5 fps** | Processed entirely on IMX500 DSP |
 | **Inference Cadence** | 1 every 2 frames | 1 every 4 frames | Predictable hardware timing |
 | **Input Tensor Size** | 320x320 | 640x640 | Hardware pre-scaled |
-| **Pi 5 CPU Load** | **< 3%** | **< 3%** | Free for ROS 2 SLAM / Nav / Planning |
+| **Pi 5 CPU Load** | **~25% (1 core)** | **~25% (1 core)** | ~6% of total 4-core CPU (ROS message serialization; on-chip inference is 0% CPU) |
 
 <p align="center">
   <img src="docs/images/topic_hz.png" width="48%" alt="Camera Video Rate 30 Hz" />
   <img src="docs/images/detection_topic_hz.png" width="48%" alt="Detection Inference Rate 7.5 Hz" />
-  <br/><em>Live verification: /camera/image_raw running at 30.0 Hz (left) and /detections running at 7.5 Hz on-chip (right)</em>
+  <br/><em>Live verification: /camera/image_raw running at 30.0 Hz (left) and /detections topic running at 30.0 Hz with ~7.5 Hz fresh on-chip inference updates (right)</em>
 </p>
 
 > [!TIP]
@@ -402,19 +396,17 @@ print("Waiting for first inference result...")
 try:
     for i in range(100):
         metadata = picam2.capture_metadata()
-        detections = imx500.get_results(metadata, show=False)
+        outputs = imx500.get_outputs(metadata, add_batch=True)
 
-        if detections:
-            print(f"Frame {i}: {len(detections)} detection(s)")
-            for det in detections:
-                box = det.box  # (x, y, w, h) normalized
-                score = det.conf
-                label = det.category
-                print(f"  → class={label}  conf={score:.2f}  bbox={box}")
+        if outputs is not None:
+            boxes, scores, classes = outputs[0][0], outputs[1][0], outputs[2][0]
+            print(f"Frame {i}: {len(scores)} raw output(s)")
+            for b, s, c in zip(boxes[:3], scores[:3], classes[:3]):
+                print(f"  → class={int(c)} conf={float(s):.2f} box={b}")
         else:
-            print(f"Frame {i}: no detections yet")
+            print(f"Frame {i}: inference running on camera DSP...")
 
-        time.sleep(0.066)  # ~15 fps
+        time.sleep(0.033)  # ~30 fps
 finally:
     picam2.stop()
     print("Done.")

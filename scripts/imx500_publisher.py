@@ -80,6 +80,7 @@ class IMX500Publisher(Node):
 
         # Stats tracking
         self.running = True
+        self._streaming_active = False
         self._stat_lock = threading.Lock()
         self._cap_count = 0
         self._unique_inf_count = 0
@@ -151,7 +152,7 @@ class IMX500Publisher(Node):
         self.picam2.pre_callback = self._on_frame
         self.picam2.start()
         time.sleep(0.3)
-        self.get_logger().info('Camera started successfully.')
+        self.get_logger().info('Camera pipeline started. Waiting for first frame & inference...')
 
     def _parameters_callback(self, params):
         for param in params:
@@ -171,6 +172,10 @@ class IMX500Publisher(Node):
             return
 
         try:
+            if not self._streaming_active:
+                self._streaming_active = True
+                self.get_logger().info('IMX500 camera active: receiving frames and AI inference.')
+
             metadata = request.get_metadata()
             np_outputs = self.imx500.get_outputs(metadata, add_batch=True)
             raw_frame = request.make_array("main")
@@ -358,9 +363,15 @@ def main(args=None):
     rclpy.init(args=args)
     node = IMX500Publisher()
     try:
+        from rclpy.executors import ExternalShutdownException
+        shutdown_exceptions = (KeyboardInterrupt, ExternalShutdownException)
+    except ImportError:
+        shutdown_exceptions = (KeyboardInterrupt,)
+
+    try:
         rclpy.spin(node)
-    except KeyboardInterrupt:
-        node.get_logger().info('Shutting down IMX500 publisher...')
+    except shutdown_exceptions:
+        print('Shutting down IMX500 publisher...', flush=True)
     finally:
         node.stop()
         node.destroy_node()
