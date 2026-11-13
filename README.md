@@ -1,4 +1,4 @@
-# 🎯 ros2-imx500-rpi5
+# ros2-imx500-rpi5
 
 **Run the Sony IMX500 AI Camera with ROS 2 Humble on Raspberry Pi 5 — Fully Containerized.**
 
@@ -20,24 +20,24 @@
 
 ---
 
-## 📑 Table of Contents
+## Table of Contents
 
-- [What's Inside](#-whats-inside)
-- [Why This Exists](#-why-this-exists)
-- [Key Features](#-key-features)
-- [System Architecture](#-system-architecture)
-- [Hardware & Avionics](#-hardware--avionics)
-- [Docker Image Targets](#-docker-image-targets)
-- [Verified Performance](#-verified-performance)
-- [Quick Start](#-quick-start)
-- [Python Inference Example](#-python-inference-example)
-- [📖 Documentation Roadmap](#-documentation-roadmap)
-- [Contributing](#-contributing)
-- [License](#-license)
+- [What's Inside](#whats-inside)
+- [Why This Exists](#why-this-exists)
+- [Key Features](#key-features)
+- [System Architecture](#system-architecture)
+- [Hardware & Avionics](#hardware--avionics)
+- [Docker Image Targets](#docker-image-targets)
+- [Verified Performance](#verified-performance)
+- [Quick Start](#quick-start)
+- [Python Inference Example](#python-inference-example)
+- [Documentation Roadmap](#documentation-roadmap)
+- [Contributing](#contributing)
+- [License](#license)
 
 ---
 
-## 📦 What's Inside
+## What's Inside
 
 | Component | Version / Specification | Role in System Stack |
 | :--- | :--- | :--- |
@@ -53,33 +53,31 @@
 
 ---
 
-## 🧩 Why This Exists
+## Why This Exists
 
 The **Sony IMX500** is an intelligent 12.3 MP image sensor featuring an **integrated hardware neural network accelerator**. It connects to the Raspberry Pi 5 via a 4-lane MIPI CSI-2 bus and offloads tensor convolution, activation, and bounding box post-processing entirely from the Pi's CPU.
 
 However, a fundamental operating system incompatibility exists:
 
-```text
-Raspberry Pi OS (Host)                 Ubuntu 22.04 (ROS 2 Target)
--------------------------              ----------------------------
-✅ Proprietary IMX500 drivers (imx500.ko)  ❌ No downstream IMX500 kernel drivers
-✅ Downstream PiSP pipeline handler        ❌ No PiSP media controller patches
-✅ Firmware packages (imx500-all)          ❌ No official RPK firmware support
-❌ Officially lacks ROS 2 Humble debians   ✅ Official target tier for ROS 2 Humble
-```
+| Feature / Dependency | Raspberry Pi OS Host | Standard Ubuntu 22.04 |
+| :--- | :---: | :---: |
+| **Kernel Modules (`imx500.ko`, `pisp_be.ko`)** | Supported | Not Available |
+| **Downstream PiSP Pipeline Handler** | Supported | Not Available |
+| **Hardware Firmware Blobs (`imx500-all`)** | Supported | Not Available |
+| **Official ROS 2 Humble Native Debians** | Not Available | Supported |
 
-**Before this project, running ROS 2 Humble with the IMX500 was effectively impossible.** Developers had to choose between camera hardware support (Pi OS) or robotics middleware (Ubuntu).
+Developers had to choose between camera hardware support (Pi OS) or robotics middleware (Ubuntu).
 
 ### The Solution:
 - Runs **Raspberry Pi OS 64-bit** on the bare metal host to maintain physical hardware drivers, device nodes, and kernel firmware.
 - Executes an **Ubuntu 22.04** container on top of the host kernel.
 - **Source-builds** the Raspberry Pi fork of `libcamera` with PiSP and Python bindings inside Ubuntu.
 - Dynamically bind-mounts `/dev`, `/run/udev`, and grants character cgroups via [`run.sh`](run.sh).
-- **Result**: Native-rate 30 FPS IMX500 camera access + on-chip AI inference + ROS 2 Humble with **zero compromise**.
+- **Result**: Native-rate 30 FPS IMX500 camera access, on-chip AI inference, and ROS 2 Humble with complete compatibility.
 
 ---
 
-## ⚡ Key Features
+## Key Features
 
 - **Full IMX500 Hardware Acceleration**: 12.3 MP capture, INT8 on-chip neural inference, and sensor metadata readback.
 - **Zero Host CPU Inference Load**: Frees 94% of the Raspberry Pi 5 CPU for MAVROS, SLAM, state estimation, and trajectory control.
@@ -91,7 +89,7 @@ Raspberry Pi OS (Host)                 Ubuntu 22.04 (ROS 2 Target)
 
 ---
 
-## 🏗 System Architecture
+## System Architecture
 
 ```mermaid
 flowchart TD
@@ -121,7 +119,7 @@ flowchart TD
 
 ---
 
-## 🛠 Hardware & Avionics
+## Hardware & Avionics
 
 | Component | Model | Purpose |
 | :--- | :--- | :--- |
@@ -139,7 +137,7 @@ flowchart TD
 
 ---
 
-## 🏷 Docker Image Targets
+## Docker Image Targets
 
 The repository includes a multi-stage [`Dockerfile`](Dockerfile) supporting three specialized targets:
 
@@ -159,7 +157,7 @@ docker pull ghcr.io/abhinmadhu01/ros2-imx500-rpi5:full
 
 ---
 
-## 📊 Verified Performance
+## Verified Performance
 
 Empirical hardware telemetry measured on Raspberry Pi 5 Model B Rev 1.1 running Debian 13 Trixie host and Ubuntu 22.04 container:
 
@@ -179,7 +177,7 @@ Empirical hardware telemetry measured on Raspberry Pi 5 Model B Rev 1.1 running 
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
 ### 1. Clone Repository & Run Environment Diagnostics
 
@@ -220,7 +218,7 @@ python3 scripts/imx500_publisher.py
 
 ---
 
-## 🧪 Python Inference Example
+## Python Inference Example
 
 ```python
 #!/usr/bin/env python3
@@ -260,7 +258,7 @@ finally:
 
 ---
 
-## 📖 Documentation Roadmap
+## Documentation Roadmap
 
 Explore the comprehensive step-by-step documentation modules:
 
@@ -279,7 +277,7 @@ Explore the comprehensive step-by-step documentation modules:
 
 ---
 
-## 🤝 Contributing
+## Contributing
 
 Contributions are welcome! Please check the [Contributing Guidelines](CONTRIBUTING.md) and review the [Troubleshooting Guide](docs/troubleshooting.md) before submitting pull requests.
 
@@ -291,7 +289,7 @@ Contributions are welcome! Please check the [Contributing Guidelines](CONTRIBUTI
 
 ---
 
-## 📄 License
+## License
 
 This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.
 

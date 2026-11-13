@@ -182,7 +182,7 @@ Successfully captured frame: (480, 640, 3)
 
 <div align="center">
 
-| [⬅️ Previous: **04 - Multi-Stage Container Builds**](building.md) | [📖 **Documentation Roadmap**](../README.md#documentation-roadmap) | [➡️ Next: **06 - IMX500 ROS 2 Publisher Node**](publisher-node.md) |
+| [Previous: **04 - Multi-Stage Container Builds**](building.md) | [**Documentation Roadmap**](../README.md#documentation-roadmap) | [Next: **06 - IMX500 ROS 2 Publisher Node**](publisher-node.md) |
 | :--- | :---: | ---: |
 
 </div>

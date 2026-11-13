@@ -97,7 +97,7 @@ Common issues, diagnostic solutions, and failure modes when working with the Son
 
 <div align="center">
 
-| [⬅️ Previous: **08 - Verified Benchmarks & Telemetry**](performance.md) | [📖 **Documentation Roadmap**](../README.md#documentation-roadmap) | [➡️ Next: **10 - Known Limitations & Gotchas**](known-issues.md) |
+| [Previous: **08 - Verified Benchmarks & Telemetry**](performance.md) | [**Documentation Roadmap**](../README.md#documentation-roadmap) | [Next: **10 - Known Limitations & Gotchas**](known-issues.md) |
 | :--- | :---: | ---: |
 
 </div>

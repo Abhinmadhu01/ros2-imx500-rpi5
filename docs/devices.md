@@ -101,7 +101,7 @@ To enable unhindered camera operation without exposing full root host privileges
 
 <div align="center">
 
-| [⬅️ Previous: **02 - Hardware & Avionics Setup**](hardware.md) | [📖 **Documentation Roadmap**](../README.md#documentation-roadmap) | [➡️ Next: **04 - Multi-Stage Container Builds**](building.md) |
+| [Previous: **02 - Hardware & Avionics Setup**](hardware.md) | [**Documentation Roadmap**](../README.md#documentation-roadmap) | [Next: **04 - Multi-Stage Container Builds**](building.md) |
 | :--- | :---: | ---: |
 
 </div>

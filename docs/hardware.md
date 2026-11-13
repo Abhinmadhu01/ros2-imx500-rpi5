@@ -95,7 +95,7 @@ Under continuous 30 FPS camera capture and ROS message transport, the Broadcom B
 
 <div align="center">
 
-| [⬅️ Previous: **01 - Host Setup Guide**](host-setup.md) | [📖 **Documentation Roadmap**](../README.md#documentation-roadmap) | [➡️ Next: **03 - Device Access & Dynamic Cgroups**](devices.md) |
+| [Previous: **01 - Host Setup Guide**](host-setup.md) | [**Documentation Roadmap**](../README.md#documentation-roadmap) | [Next: **03 - Device Access & Dynamic Cgroups**](devices.md) |
 | :--- | :---: | ---: |
 
 </div>

@@ -117,7 +117,7 @@ Expected output:
 
 <div align="center">
 
-| [⬅️ Previous: **06 - IMX500 ROS 2 Publisher Node**](publisher-node.md) | [📖 **Documentation Roadmap**](../README.md#documentation-roadmap) | [➡️ Next: **08 - Verified Benchmarks & Telemetry**](performance.md) |
+| [Previous: **06 - IMX500 ROS 2 Publisher Node**](publisher-node.md) | [**Documentation Roadmap**](../README.md#documentation-roadmap) | [Next: **08 - Verified Benchmarks & Telemetry**](performance.md) |
 | :--- | :---: | ---: |
 
 </div>

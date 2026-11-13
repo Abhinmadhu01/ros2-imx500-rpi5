@@ -59,7 +59,7 @@ In traditional edge vision architectures (e.g., OpenCV DNN, TFLite, or PyTorch C
 
 <div align="center">
 
-| [⬅️ Previous: **07 - RPK Model Conversion & Zoo**](model-conversion.md) | [📖 **Documentation Roadmap**](../README.md#documentation-roadmap) | [➡️ Next: **09 - Troubleshooting & FAQ**](troubleshooting.md) |
+| [Previous: **07 - RPK Model Conversion & Zoo**](model-conversion.md) | [**Documentation Roadmap**](../README.md#documentation-roadmap) | [Next: **09 - Troubleshooting & FAQ**](troubleshooting.md) |
 | :--- | :---: | ---: |
 
 </div>

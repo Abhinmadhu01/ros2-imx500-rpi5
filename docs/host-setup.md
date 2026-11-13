@@ -116,7 +116,7 @@ If the camera preview opens with live bounding boxes drawn around detected objec
 
 <div align="center">
 
-| [⬅️ Previous: **Master Overview**](../README.md) | [📖 **Documentation Roadmap**](../README.md#documentation-roadmap) | [➡️ Next: **02 - Hardware & Avionics Setup**](hardware.md) |
+| [Previous: **Master Overview**](../README.md) | [**Documentation Roadmap**](../README.md#documentation-roadmap) | [Next: **02 - Hardware & Avionics Setup**](hardware.md) |
 | :--- | :---: | ---: |
 
 </div>

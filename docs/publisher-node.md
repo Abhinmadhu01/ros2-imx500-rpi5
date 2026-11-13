@@ -110,7 +110,7 @@ ros2 param set /imx500_publisher max_cache_age_sec 0.25
 
 <div align="center">
 
-| [⬅️ Previous: **05 - Running Containers & Orchestration**](running.md) | [📖 **Documentation Roadmap**](../README.md#documentation-roadmap) | [➡️ Next: **07 - RPK Model Conversion & Zoo**](model-conversion.md) |
+| [Previous: **05 - Running Containers & Orchestration**](running.md) | [**Documentation Roadmap**](../README.md#documentation-roadmap) | [Next: **07 - RPK Model Conversion & Zoo**](model-conversion.md) |
 | :--- | :---: | ---: |
 
 </div>

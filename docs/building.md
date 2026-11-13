@@ -97,7 +97,7 @@ ghcr.io/abhinmadhu01/ros2-imx500-rpi5 base    9b1a7d4e56c2   2 days ago      2.3
 
 <div align="center">
 
-| [⬅️ Previous: **03 - Device Access & Dynamic Cgroups**](devices.md) | [📖 **Documentation Roadmap**](../README.md#documentation-roadmap) | [➡️ Next: **05 - Running Containers & Orchestration**](running.md) |
+| [Previous: **03 - Device Access & Dynamic Cgroups**](devices.md) | [**Documentation Roadmap**](../README.md#documentation-roadmap) | [Next: **05 - Running Containers & Orchestration**](running.md) |
 | :--- | :---: | ---: |
 
 </div>

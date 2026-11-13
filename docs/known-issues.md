@@ -63,7 +63,7 @@ The Raspberry Pi 5 features two dual-purpose MIPI CSI/DSI ports:
 
 <div align="center">
 
-| [⬅️ Previous: **09 - Troubleshooting & FAQ**](troubleshooting.md) | [📖 **Documentation Roadmap**](../README.md#documentation-roadmap) | [➡️ Next: **Master Overview**](../README.md) |
+| [Previous: **09 - Troubleshooting & FAQ**](troubleshooting.md) | [**Documentation Roadmap**](../README.md#documentation-roadmap) | [Next: **Master Overview**](../README.md) |
 | :--- | :---: | ---: |
 
 </div>
