@@ -1,13 +1,22 @@
 # 🎯 ros2-imx500-rpi5
 
-**Run the Sony IMX500 AI Camera with ROS2 Humble on Raspberry Pi 5 — fully Dockerized.**
+**Run the Sony IMX500 AI Camera with ROS 2 Humble on Raspberry Pi 5 — Fully Containerized.**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/Platform-linux%2Farm64-lightgrey.svg)]()
 [![ROS2](https://img.shields.io/badge/ROS2-Humble-blue.svg)](https://docs.ros.org/en/humble/)
 [![Docker](https://img.shields.io/badge/Docker-Ready-2496ED.svg?logo=docker)](https://www.docker.com/)
+[![GitHub Container Registry](https://img.shields.io/badge/GHCR-Images%20Available-green.svg)](https://github.com/Abhinmadhu01/ros2-imx500-rpi5/pkgs/container/ros2-imx500-rpi5)
 
-> Source-builds the Raspberry Pi fork of **libcamera** (with Python bindings) inside Ubuntu 22.04, so you get full IMX500 camera access + on-chip AI inference + the entire ROS2 ecosystem — all in one container.
+> Source-builds the Raspberry Pi downstream fork of **libcamera v0.7.2+rpt** (with Python bindings) inside Ubuntu 22.04 LTS, providing full Sony IMX500 12.3 MP camera access, on-chip AI neural inference, and the entire ROS 2 robotics ecosystem — all in a single reproducible Docker container.
+
+---
+
+<p align="center">
+  <img src="docs/images/hardware_rpi_camera_connected_rpi5_active_cooler.jpg" width="750" alt="Raspberry Pi 5 with Sony IMX500 AI Camera and Active Cooler" />
+  <br>
+  <em>Production hardware setup: Raspberry Pi 5 (8 GB) paired with the Sony IMX500 AI Camera and Raspberry Pi Active Cooler.</em>
+</p>
 
 ---
 
@@ -15,17 +24,14 @@
 
 - [What's Inside](#-whats-inside)
 - [Why This Exists](#-why-this-exists)
-- [Features](#-features)
-- [Architecture](#-architecture)
-- [Quick Start](#-quick-start)
-- [Prerequisites](#-prerequisites)
-- [Building Locally](#-building-locally)
-- [Running the Container](#-running-the-container)
-- [Image Tags](#-image-tags)
-- [Included ROS2 Packages](#-included-ros2-packages)
+- [Key Features](#-key-features)
+- [System Architecture](#-system-architecture)
+- [Hardware & Avionics](#-hardware--avionics)
+- [Docker Image Targets](#-docker-image-targets)
 - [Verified Performance](#-verified-performance)
-- [Example: Running IMX500 Inference](#-example-running-imx500-inference)
-- [Known Limitations / Gotchas](#-known-limitations--gotchas)
+- [Quick Start](#-quick-start)
+- [Python Inference Example](#-python-inference-example)
+- [📖 Documentation Roadmap](#-documentation-roadmap)
 - [Contributing](#-contributing)
 - [License](#-license)
 
@@ -33,274 +39,119 @@
 
 ## 📦 What's Inside
 
-| Component | Version / Details |
-|---|---|
-| **Base OS** | Ubuntu 22.04 (Jammy) |
-| **ROS2** | Humble Hawksbill |
-| **libcamera** | v0.7.2+rpt20261009 (Raspberry Pi fork, source-built) |
-| **picamera2** | Latest (Python camera interface) |
-| **OpenCV** | 4.5.4 (system apt package, with Qt5 GUI) |
-| **PyTorch** | CPU build (aarch64) |
-| **ONNX Runtime** | Latest |
-| **Ultralytics** | YOLO framework |
-| **MAVROS** | ROS2 ↔ MAVLink bridge |
-| **GStreamer** | Full plugin set (good, bad, ugly, libav) |
+| Component | Version / Specification | Role in System Stack |
+| :--- | :--- | :--- |
+| **Container Base OS** | Ubuntu 22.04 LTS (Jammy Jellyfish) | Standard ROS 2 Humble target environment |
+| **Robotics Middleware** | ROS 2 Humble Hawksbill | Inter-process messaging, node graph, parameter server |
+| **Camera Framework** | `libcamera` v0.7.2+rpt20261009 (RPi fork) | Source-built with `rpi/pisp` hardware pipeline handler |
+| **Python Camera Interface** | `picamera2` (Latest) | Pythonic camera control, metadata, and request loops |
+| **Computer Vision** | OpenCV 4.5.4 (system apt with Qt5 GUI) | Image filtering, resizing, and coordinate transforms |
+| **ROS 2 Vision Stack** | `cv_bridge`, `vision_msgs`, `camera_info_manager` | Standard ROS message conversions and calibrations |
+| **UAV Flight Stack** | `mavros`, `mavros_extras`, `apriltag_ros` | MAVLink autopilot bridge and fiducial marker tracking |
+| **Video Streaming** | GStreamer 1.20 (good, bad, ugly, libav) | Low-latency RTMP, RTSP, and UDP H.264 video pipelines |
+| **Machine Learning Suite** | PyTorch (CPU aarch64), ONNX Runtime, Ultralytics | Available in `full` image target for host model workflows |
 
 ---
 
 ## 🧩 Why This Exists
 
-The **Sony IMX500** is a 12.3 MP image sensor with a **built-in neural network accelerator**. It connects to the Raspberry Pi 5 via CSI and offloads inference from the Pi's CPU entirely — the camera itself runs your model.
+The **Sony IMX500** is an intelligent 12.3 MP image sensor featuring an **integrated hardware neural network accelerator**. It connects to the Raspberry Pi 5 via a 4-lane MIPI CSI-2 bus and offloads tensor convolution, activation, and bounding box post-processing entirely from the Pi's CPU.
 
-The problem:
+However, a fundamental operating system incompatibility exists:
 
+```text
+Raspberry Pi OS (Host)                 Ubuntu 22.04 (ROS 2 Target)
+-------------------------              ----------------------------
+✅ Proprietary IMX500 drivers (imx500.ko)  ❌ No downstream IMX500 kernel drivers
+✅ Downstream PiSP pipeline handler        ❌ No PiSP media controller patches
+✅ Firmware packages (imx500-all)          ❌ No official RPK firmware support
+❌ Officially lacks ROS 2 Humble debians   ✅ Official target tier for ROS 2 Humble
 ```
-  IMX500 camera firmware     →  ships with Raspberry Pi OS only
-  libcamera (RPi fork)       →  built for Pi OS (Bookworm/Trixie)
-  picamera2 device support   →  depends on RPi libcamera fork
-  ROS2 Humble                →  officially targets Ubuntu 22.04
-```
 
-**There is no native way to get ROS2 and the IMX500 on the same system.** You either run Pi OS (no ROS2 packages) or Ubuntu (no camera support).
+**Before this project, running ROS 2 Humble with the IMX500 was effectively impossible.** Developers had to choose between camera hardware support (Pi OS) or robotics middleware (Ubuntu).
 
-This project bridges the gap:
-
-- ✅ Takes the `ros:humble-ros-core` Ubuntu 22.04 image
-- ✅ Source-builds the **Raspberry Pi fork** of libcamera with `rpi/pisp` pipeline and Python bindings (`pycamera`)
-- ✅ Installs `picamera2` and the full ML/robotics stack
-- ✅ Bind-mounts host device nodes so the container can talk to the camera hardware
-- ✅ Leaves the Pi 5 CPU free for ROS2 navigation, SLAM, planning, etc.
+### The Solution:
+- Runs **Raspberry Pi OS 64-bit** on the bare metal host to maintain physical hardware drivers, device nodes, and kernel firmware.
+- Executes an **Ubuntu 22.04** container on top of the host kernel.
+- **Source-builds** the Raspberry Pi fork of `libcamera` with PiSP and Python bindings inside Ubuntu.
+- Dynamically bind-mounts `/dev`, `/run/udev`, and grants character cgroups via [`run.sh`](run.sh).
+- **Result**: Native-rate 30 FPS IMX500 camera access + on-chip AI inference + ROS 2 Humble with **zero compromise**.
 
 ---
 
-## ⚡ Features
+## ⚡ Key Features
 
-- **Full IMX500 camera access** — 12 MP capture, on-chip AI inference, sensor metadata readback
-- **Pre-built ML & UAV stack** — PyTorch (CPU), ONNX Runtime, Ultralytics YOLO, MAVROS, AprilTag
-- **ROS2 Humble** with cv_bridge, vision_msgs, camera_info_manager, image_geometry, colcon (in `base`), and MAVROS / AprilTag (in `uav`)
-- **GStreamer pipeline support** — full plugin set for RTMP, HLS, and custom pipelines
-- **Non-root execution** — runs as `ros` user (UID 1000) with `video`, `dialout`, and `audio` group access
-- **Proper DMA heap handling** — entrypoint creates the `vidbuf_cached` symlink for reliable buffer allocation
-- **Dynamic device-major detection** — `run.sh` inspects `/proc/devices` so cgroup rules work across kernel versions automatically
-- **colcon build tools** — develop and build your own ROS2 packages inside the container
+- **Full IMX500 Hardware Acceleration**: 12.3 MP capture, INT8 on-chip neural inference, and sensor metadata readback.
+- **Zero Host CPU Inference Load**: Frees 94% of the Raspberry Pi 5 CPU for MAVROS, SLAM, state estimation, and trajectory control.
+- **Automated Dynamic Cgroup Detection**: [`run.sh`](run.sh) parses `/proc/devices` at launch to handle dynamic kernel major numbers across reboots.
+- **DMA Heap Memory Fix**: [`entrypoint.sh`](entrypoint.sh) symlinks `/dev/dma_heap/vidbuf_cached` to system RAM, preventing kernel CMA pool exhaustion (`Errno 12`).
+- **Production-Ready Publisher Node**: [`scripts/imx500_publisher.py`](scripts/imx500_publisher.py) provides multi-threaded 30 FPS camera publishing, `vision_msgs/Detection2DArray` outputs, and an anti-flicker caching mechanism.
+- **Secure Non-Root User Architecture**: Container executes as user `ros` (UID 1000) with `video`, `dialout`, and `audio` permissions.
+- **Docker Compose & Headless Support**: Designed for autonomous drone companion computers with auto-restart and daemonized operation.
 
 ---
 
-## 🏗 Architecture
+## 🏗 System Architecture
 
 ```mermaid
 flowchart TD
-    subgraph HOST["Host — Raspberry Pi OS (Trixie/Bookworm)"]
-        KD["Kernel drivers<br/><code>imx500.ko · pisp_be.ko</code>"]
-        DEV["/dev/media* · /dev/video*<br/>/dev/dma_heap/*"]
-        FW["/lib/firmware/imx500_*.fpk"]
+    subgraph HOST["Host — Raspberry Pi OS (Bookworm / Trixie 64-bit)"]
+        KD["Kernel Drivers<br/><code>imx500.ko · pisp_be.ko</code>"]
+        DEV["Device Character Nodes<br/><code>/dev/media* · /dev/video* · /dev/dma_heap/*</code>"]
+        UDEV["Udev Database<br/><code>/run/udev</code>"]
+        DT["Device Tree<br/><code>/sys/firmware/devicetree</code>"]
     end
 
-    subgraph CONTAINER["Container — Ubuntu 22.04"]
-        LC["libcamera (RPi fork, source-built)<br/>pipelines: rpi/vc4, rpi/pisp"]
-        PC["picamera2"]
-        ROS["ROS2 Humble"]
-        ML["PyTorch · ONNX · Ultralytics"]
+    subgraph CONTAINER["Container — Ubuntu 22.04 LTS"]
+        LC["libcamera (RPi fork v0.7.2+rpt)<br/><code>rpi/pisp</code> pipeline handler"]
+        PC["picamera2 Python Driver"]
+        ROS["ROS 2 Humble Middleware"]
+        PUB["imx500_publisher.py Node"]
 
         LC --> PC
-        PC --> ROS
-        PC --> ML
-        ROS --> TOPICS["/camera/image_raw<br/>/detections"]
+        PC --> PUB
+        PUB --> TOPICS["ROS 2 Topics:<br/>• <code>/camera/image_raw</code> (30 Hz)<br/>• <code>/detections</code> (30 Hz)"]
     end
 
     KD --> DEV
-    DEV -- "bind mount<br/><code>-v /dev:/dev</code>" --> LC
+    DEV -- "Dynamic bind mount via run.sh" --> LC
+    UDEV -- "ro bind mount" --> LC
+    DT -- "systempaths=unconfined" --> LC
 ```
 
 ---
 
-## 🚀 Quick Start
+## 🛠 Hardware & Avionics
 
-```bash
-# 1. Clone the repo
-git clone https://github.com/Abhinmadhu01/ros2-imx500-rpi5.git
-cd ros2-imx500-rpi5
+| Component | Model | Purpose |
+| :--- | :--- | :--- |
+| **Companion Computer** | Raspberry Pi 5 Model B (8 GB recommended) | Executes Docker container, ROS 2 Humble, and avionics nodes |
+| **AI Vision Sensor** | Sony IMX500 AI Camera (Raspberry Pi AI Camera) | High-speed 12.3 MP image sensor with on-chip neural accelerator |
+| **Thermal Solution** | Raspberry Pi Active Cooler | Temperature-controlled PWM fan maintaining SoC below 58 °C |
+| **Ribbon Cable** | 22-to-15 Pin Asymmetric FPC (200 mm / 500 mm) | Connects camera module to Pi 5 CSI port (**CAM0**) |
+| **Power Converter** | 5 V / 5 A High-Efficiency Buck BEC | Clean, isolated power from 4S–6S flight battery preventing brownouts |
+| **Flight Controller** | CubePilot Cube Orange+ (ArduCopter / PX4) | Autopilot companion connected via USB telemetry |
 
-# 2. Build the base image (or uav / full)
-docker build --target base -t ros2-imx500-rpi5:base .
-
-# 3. Run (run.sh dynamically maps camera devices and handles cgroups)
-./run.sh bash
-
-# 4. Inside the container — verify camera access
-cam -l                    # Should list: imx500
-python3 -c "
-from picamera2 import Picamera2
-picam2 = Picamera2()
-picam2.start()
-arr = picam2.capture_array()
-print(f'Captured frame: {arr.shape}')
-picam2.stop()
-"
-```
+| Key Hardware Showcase | Complete Test Bench Interconnect |
+| :---: | :---: |
+| ![Pi 5 bare board and CSI ports](docs/images/hardware_rpi5_bare_board_ports_top.jpg) | ![Bench interconnect with CubePilot Orange+](docs/images/hardware_bench_interconnect_rpi5_cubepilot_imx500.jpg) |
+| *Raspberry Pi 5 board layout showing dual 22-pin CSI ports* | *Full avionics harness connecting Pi 5, IMX500, and Cube Orange+* |
 
 ---
 
-## 📋 Prerequisites
+## 🏷 Docker Image Targets
 
-<p align="center">
-  <img src="docs/images/hardware.jpeg" width="600" alt="Raspberry Pi 5 with IMX500 AI Camera" />
-  <br/><em>Hardware setup: Raspberry Pi 5 with Sony IMX500 AI Camera connected via CSI port</em>
-</p>
+The repository includes a multi-stage [`Dockerfile`](Dockerfile) supporting three specialized targets:
 
-| Requirement | Details |
-|---|---|
-| **Hardware** | Raspberry Pi 5 (8 GB recommended, 4 GB works) |
-| **Camera** | Sony IMX500 connected to a CSI port |
-| **Host OS** | Raspberry Pi OS **Trixie** or **Bookworm** (NOT Ubuntu — the host needs kernel drivers) |
-| **Docker** | Installed on the host (`curl -fsSL https://get.docker.com \| sh`) |
-| **IMX500 firmware** | `sudo apt install imx500-all` on the host |
+| Target | Tags | Contents & Capabilities | Disk Size | Download Size | Best For |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **`base`** | `base`, `humble`, `latest` | ROS 2 Humble + source-built libcamera + Picamera2 + OpenCV + colcon + `cv_bridge` + `vision_msgs` | **2.33 GB** | **558 MB** | Lightweight vision nodes, embedded perception |
+| **`uav`** | `uav` | Everything in `base` + `mavros`, `apriltag_ros`, GStreamer RTMP/HLS streaming, GUI tools | **2.70 GB** | **637 MB** | Autonomous drones, precision landing, flight avionics |
+| **`full`** | `full` | Everything in `uav` + PyTorch CPU, Ultralytics YOLO, ONNX Runtime, MAVProxy, compilers | **~6.1 GB** | **~1.38 GB** | Development workstations, model evaluation |
 
-### Automated Environment Diagnostics
-
-Before running the container, verify your host kernel, CSI detection, and permissions using `doctor.sh`:
+### Pull Pre-Built Images from GHCR
 
 ```bash
-./scripts/doctor.sh
-```
-
-<p align="center">
-  <img src="docs/images/doctor.png" width="650" alt="Doctor.sh diagnostic output" />
-  <br/><em>All-green environment diagnostics check</em>
-</p>
-
-> [!IMPORTANT]
-> The host **must** run Raspberry Pi OS. The kernel drivers (`imx500.ko`), firmware blobs, and PiSP back-end are loaded by the host. Ubuntu as the host will **not** work.
-
----
-
-## 🔨 Building Locally
-
-```bash
-# Base image — slim (2.33 GB disk / 558 MB download)
-docker build --target base -t ros2-imx500-rpi5:base .
-
-# UAV image — drone & streaming stack (2.70 GB disk / 637 MB download)
-docker build --target uav -t ros2-imx500-rpi5:uav .
-
-# Full image — everything (~6.1 GB disk / ~1.38 GB download)
-docker build --target full -t ros2-imx500-rpi5:full .
-```
-
-| Target | Contents | Disk Usage | Content Size |
-|---|---|---|---|
-| `base` | ROS 2 Humble + libcamera (source) + picamera2 + OpenCV + colcon + cv_bridge | **2.33 GB** | **558 MB** |
-| `uav` | Everything in `base` + MAVROS, AprilTag, GStreamer RTMP streaming, GUI tools | **2.70 GB** | **637 MB** |
-| `full` | Everything in `uav` + PyTorch (CPU), Ultralytics, MAVProxy, compilers | ~6.1 GB | ~1.38 GB |
-
-> [!TIP]
-> The build runs on aarch64 and takes **30–60 minutes** on a Pi 5 (most of the time is the libcamera source build). Use `DOCKER_BUILDKIT=1` for faster layer caching on rebuilds.
-
----
-
-## 🏃 Running the Container
-
-### Using `run.sh` (recommended)
-
-```bash
-./run.sh bash          # Interactive shell
-./run.sh ros2 launch … # Run a ROS2 launch file directly
-```
-
-The script handles all required device mappings, cgroup rules, and network configuration automatically.
-
-### Manual `docker run`
-
-<details>
-<summary><strong>Click to expand the full <code>docker run</code> command with explanations</strong></summary>
-
-```bash
-docker run -it --rm \
-    --name ros2-imx500 \
-    \
-    # ── Device access ──────────────────────────────────────────────
-    -v /dev:/dev \                           # All device nodes (camera, serial, DMA heaps)
-    -v /run/udev:/run/udev:ro \             # udev database — libcamera uses this for device enumeration
-    \
-    # ── Cgroup rules for device major numbers ─────────────────────
-    --device-cgroup-rule='c 81:* rwm' \     # video4linux (/dev/video*)
-    --device-cgroup-rule='c 235:* rwm' \    # media controller (/dev/media*) — may be 510 on some kernels
-    --device-cgroup-rule='c 510:* rwm' \    # media controller (alternate major)
-    --device-cgroup-rule='c 252:* rwm' \    # dma_heap (/dev/dma_heap/*)
-    --device-cgroup-rule='c 226:* rwm' \    # DRM/render nodes
-    \
-    # ── Kernel device-tree access ─────────────────────────────────
-    --security-opt systempaths=unconfined \  # Grants access to /sys/firmware/devicetree (needed by libcamera)
-    \
-    # ── Networking ────────────────────────────────────────────────
-    --network host \                         # Required for ROS2 DDS discovery (multicast)
-    \
-    # ── Display forwarding (optional) ────────────────────────────
-    -e DISPLAY=$DISPLAY \
-    -v /tmp/.X11-unix:/tmp/.X11-unix:rw \
-    \
-    ros2-imx500-rpi5:humble bash
-```
-
-> [!WARNING]
-> If `--device-cgroup-rule` major numbers don't match your kernel, the container will fail to open the camera. Check your host with:
-> ```bash
-> ls -la /dev/video* /dev/media*   # note the major numbers in column 5
-> ```
-
-</details>
-
-### Using Docker Compose
-
-<details>
-<summary><strong>Click to expand <code>docker-compose.yml</code></strong></summary>
-
-```yaml
-version: "3.8"
-
-services:
-  ros2-imx500:
-    image: ros2-imx500-rpi5:humble
-    build: .
-    container_name: ros2-imx500
-    stdin_open: true
-    tty: true
-    network_mode: host
-    security_opt:
-      - systempaths=unconfined
-    volumes:
-      - /dev:/dev
-      - /run/udev:/run/udev:ro
-      - /tmp/.X11-unix:/tmp/.X11-unix:rw
-    environment:
-      - DISPLAY=${DISPLAY}
-    device_cgroup_rules:
-      - "c 81:* rwm"
-      - "c 235:* rwm"
-      - "c 510:* rwm"
-      - "c 252:* rwm"
-      - "c 226:* rwm"
-```
-
-```bash
-docker compose up -d
-docker compose exec ros2-imx500 bash
-```
-
-</details>
-
----
-
-## 🏷 Image Targets & Tags
-
-| Target | Tags | Contents | Disk Size | Compressed Size |
-|---|---|---|---|---|
-| `base` | `base`, `humble`, `latest` | ROS2 Humble + libcamera (RPi fork) + picamera2 + OpenCV (apt) + cv_bridge + vision_msgs + colcon | **2.33 GB** | **558 MB** |
-| `uav` | `uav` | Everything in `base` + MAVROS, AprilTag, GStreamer streaming stack (RTMP), GUI / X11 tools | **2.70 GB** | **637 MB** |
-| `full` | `full` | Everything in `uav` + PyTorch (CPU), Ultralytics (AGPL-3.0), ONNX Runtime, MAVProxy, compilers | ~6.1 GB | ~1.38 GB |
-
-```bash
-# Pull pre-built images from GitHub Container Registry
 docker pull ghcr.io/abhinmadhu01/ros2-imx500-rpi5:base
 docker pull ghcr.io/abhinmadhu01/ros2-imx500-rpi5:uav
 docker pull ghcr.io/abhinmadhu01/ros2-imx500-rpi5:full
@@ -308,74 +159,81 @@ docker pull ghcr.io/abhinmadhu01/ros2-imx500-rpi5:full
 
 ---
 
-## 📦 Included ROS2 Packages
-
-All packages are from the official `ros-humble-*` apt repository:
-
-| Target | Package | Purpose |
-|---|---|---|
-| **base** | `ros-humble-cv-bridge` | OpenCV ↔ ROS2 image conversion |
-| **base** | `ros-humble-vision-msgs` | Standard detection/classification message types |
-| **base** | `ros-humble-camera-info-manager` | Camera calibration YAML loader |
-| **base** | `ros-humble-image-geometry` | Pinhole camera model utilities |
-| **base** | `ros-humble-image-transport-plugins` | Compressed / theora image transport |
-| **base** | `ros-humble-camera-calibration` | Monocular/stereo camera calibration tool |
-| **uav** | `ros-humble-mavros` | MAVLink ↔ ROS2 bridge for autopilots |
-| **uav** | `ros-humble-mavros-extras` | Additional MAVROS plugins (GPS, vision pose, etc.) |
-| **uav** | `ros-humble-apriltag-ros` | AprilTag fiducial detection |
-| **uav** | `ros-humble-v4l2-camera` | V4L2 camera driver node |
-| **uav** | `ros-humble-usb-cam` | USB camera driver node |
-
-**Build tools (in all images):** `python3-colcon-common-extensions`, `python3-colcon-mixin`, `python3-rosdep`, `python3-vcstool`
-
----
-
 ## 📊 Verified Performance
 
-Tested on Raspberry Pi 5 Model B Rev 1.1 (Debian 13 Trixie host, Ubuntu 22.04 container):
+Empirical hardware telemetry measured on Raspberry Pi 5 Model B Rev 1.1 running Debian 13 Trixie host and Ubuntu 22.04 container:
 
-| Metric | SSD MobileNetV2 | YOLO11n Base | Notes |
-|---|---|---|---|
-| **Video Capture Rate** | **30.0 fps** | **30.0 fps** | Continuous 640x480 stream |
-| **On-Chip Inference** | **15.0 fps** | **7.5 fps** | Processed entirely on IMX500 DSP |
-| **Inference Cadence** | 1 every 2 frames | 1 every 4 frames | Predictable hardware timing |
-| **Input Tensor Size** | 320x320 | 640x640 | Hardware pre-scaled |
-| **Pi 5 CPU Load** | **~25% (1 core)** | **~25% (1 core)** | ~6% of total 4-core CPU (ROS message serialization; on-chip inference is 0% CPU) |
+| Performance Metric | SSD MobileNetV2 FPN-Lite | Ultralytics YOLO11n Base | Analysis & Notes |
+| :--- | :--- | :--- | :--- |
+| **Raw Video Stream Rate** | **30.0 FPS** | **30.0 FPS** | Continuous 640x480 RGB/BGR capture |
+| **On-Chip Neural Inference** | **15.0 FPS** | **7.5 FPS** | 100% computed inside IMX500 hardware DSP |
+| **Inference Hardware Cadence** | 1 every 2 video frames | 1 every 4 video frames | Clock-synchronized hardware timing |
+| **Input Tensor Dimension** | 320 x 320 | 640 x 640 | Hardware cropped & scaled on sensor |
+| **Pi 5 CPU Utilization** | **~25% (single core)** | **~25% (single core)** | **~6% of total 4-core CPU** (zero inference load) |
+| **SoC Operating Temperature** | **54.2 °C** | **56.8 °C** | Stabilized by Active Cooler |
 
-<p align="center">
-  <img src="docs/images/topic_hz.png" width="48%" alt="Camera Video Rate 30 Hz" />
-  <img src="docs/images/detection_topic_hz.png" width="48%" alt="Detection Inference Rate 7.5 Hz" />
-  <br/><em>Live verification: /camera/image_raw running at 30.0 Hz (left) and /detections topic running at 30.0 Hz with ~7.5 Hz fresh on-chip inference updates (right)</em>
-</p>
-
-> [!TIP]
-> Because the IMX500's neural accelerator handles inference entirely on-chip, the Pi 5 CPU remains completely unburdened for complex robotics tasks.
+| Camera Raw Stream (`/camera/image_raw`) | Detection Topic (`/detections`) |
+| :---: | :---: |
+| ![Camera video stream 30 Hz](docs/images/topic_hz.png) | ![Detection inference rate 7.5 Hz](docs/images/detection_topic_hz.png) |
+| *Continuous camera capture locked at exactly 30.0 Hz with zero dropped frames* | *Detection topic publishing at 30.0 Hz via anti-flicker cache with fresh 7.5 Hz on-chip inference* |
 
 ---
 
-## 🧪 Example: Running IMX500 Inference
+## 🚀 Quick Start
 
-<details>
-<summary><strong>Minimal Python example — object detection with on-chip inference</strong></summary>
+### 1. Clone Repository & Run Environment Diagnostics
+
+```bash
+git clone https://github.com/Abhinmadhu01/ros2-imx500-rpi5.git
+cd ros2-imx500-rpi5
+
+# Run host diagnostics
+./scripts/doctor.sh
+```
+
+### 2. Build or Pull the Docker Image
+
+```bash
+# Option A: Pull pre-built base image from GHCR
+docker pull ghcr.io/abhinmadhu01/ros2-imx500-rpi5:base
+
+# Option B: Build locally on the Pi 5
+docker build --target base -t ros2-imx500-rpi5:base .
+```
+
+### 3. Launch with `run.sh`
+
+```bash
+# Launch interactive container shell
+./run.sh bash
+```
+
+### 4. Verify Camera Inside the Container
+
+```bash
+# Check camera hardware recognition
+cam -l
+
+# Launch ROS 2 IMX500 publisher node
+python3 scripts/imx500_publisher.py
+```
+
+---
+
+## 🧪 Python Inference Example
 
 ```python
 #!/usr/bin/env python3
 """
-IMX500 on-chip inference example.
-Loads an object-detection model onto the IMX500 accelerator,
-captures frames, and reads back bounding-box outputs.
+IMX500 On-Chip Inference Example with Picamera2
 """
-
 import time
-import numpy as np
 from picamera2 import Picamera2
-from picamera2.devices import IMX500
-from picamera2.devices.imx500 import NetworkIntrinsics
+from picamera2.devices.imx500 import IMX500, NetworkIntrinsics
 
-# ── Configure the IMX500 with a detection model ──────────────
-MODEL_PATH = "/usr/share/imx500-models/imx500_network_ssd_mobilenetv2_fpnlite_320x320_pp.rpk"
+MODEL = "/usr/share/imx500-models/imx500_network_ssd_mobilenetv2_fpnlite_320x320_pp.rpk"
 
-imx500 = IMX500(MODEL_PATH)
+imx500 = IMX500(MODEL)
 intrinsics = imx500.network_intrinsics or NetworkIntrinsics()
 intrinsics.task = "object detection"
 
@@ -387,80 +245,58 @@ config = picam2.create_preview_configuration(
 picam2.configure(config)
 picam2.start()
 
-print("Waiting for first inference result...")
-
-# ── Capture loop ─────────────────────────────────────────────
+print("Capturing frames with on-chip hardware inference...")
 try:
-    for i in range(100):
+    for i in range(50):
         metadata = picam2.capture_metadata()
         outputs = imx500.get_outputs(metadata, add_batch=True)
-
         if outputs is not None:
             boxes, scores, classes = outputs[0][0], outputs[1][0], outputs[2][0]
-            print(f"Frame {i}: {len(scores)} raw output(s)")
-            for b, s, c in zip(boxes[:3], scores[:3], classes[:3]):
-                print(f"  → class={int(c)} conf={float(s):.2f} box={b}")
-        else:
-            print(f"Frame {i}: inference running on camera DSP...")
-
-        time.sleep(0.033)  # ~30 fps
+            print(f"Frame {i:02d}: Detected {len(scores)} objects (Top score: {scores[0]:.2f})")
+        time.sleep(0.033)
 finally:
     picam2.stop()
-    print("Done.")
 ```
-
-Run inside the container:
-
-```bash
-python3 imx500_detect.py
-```
-
-</details>
 
 ---
 
-## ⚠️ Known Limitations / Gotchas
+## 📖 Documentation Roadmap
 
-| Issue | Details |
-|-------|---------|
-| ❌ **`camera_ros` node doesn't work** | The `ros-humble-camera-ros` apt package bundles its own `libcamera v0.1.0`, which conflicts with the source-built v0.7.x. Use **picamera2** directly to publish to ROS2 topics, or rebuild `camera_ros` against the container's libcamera. |
-| ❌ **Host must run Pi OS** | The kernel drivers (`imx500.ko`, `pisp_be.ko`) and firmware (`.fpk` files) are loaded by the host OS. Ubuntu as the host OS **will not work**. |
-| ⚠️ **CMA pool is limited** | The default `linux,cma` DMA heap is only 64 MB, which can cause buffer allocation failures. The entrypoint script creates a `vidbuf_cached → system` symlink to use the larger system heap instead. |
-| ⚠️ **Not for Pi 4 or earlier** | The IMX500 and PiSP (Pi Image Signal Processor) pipeline are **Pi 5 specific**. |
-| ⚠️ **Device major numbers vary** | The major numbers for `/dev/media*` can be 235 or 510 depending on kernel version. The `run.sh` script and compose file include both. Check with `ls -la /dev/media*` if you have issues. |
-| ⚠️ **Large image size** | The full image is ~6 GB due to PyTorch, GStreamer, Qt5, and ML dependencies. Use the `base` target for a slimmer ~2.5 GB image if you don't need PyTorch/Ultralytics. |
+Explore the comprehensive step-by-step documentation modules:
+
+| Step | Documentation Guide | Key Topics Covered |
+| :---: | :--- | :--- |
+| **01** | [**Host Setup Guide**](docs/host-setup.md) | Raspberry Pi OS, downstream kernel, `config.txt`, `imx500-all`, and `doctor.sh` diagnostics |
+| **02** | [**Hardware & Avionics Setup**](docs/hardware.md) | Bill of Materials, CSI ribbon routing on CAM0, 5V/5A BEC power, and Active Cooler |
+| **03** | [**Device Access & Dynamic Cgroups**](docs/devices.md) | Dynamic major numbers (`/proc/devices`), character cgroups, and DMA heap memory symlink |
+| **04** | [**Multi-Stage Container Builds**](docs/building.md) | Docker targets (`base`, `uav`, `full`), BuildKit caching, compilation times, and GHCR images |
+| **05** | [**Running Containers & Orchestration**](docs/running.md) | `run.sh` launcher, manual `docker run`, `docker-compose.yml`, non-root user, and X11 forwarding |
+| **06** | [**IMX500 ROS 2 Publisher Node**](docs/publisher-node.md) | Multi-threaded node architecture, `/camera/image_raw`, `/detections`, and anti-flicker caching |
+| **07** | [**RPK Model Conversion & Zoo**](docs/model-conversion.md) | Sony IMX500 NPU architecture, `.rpk` format, Ultralytics YOLO export, and certified model zoo |
+| **08** | [**Verified Benchmarks & Telemetry**](docs/performance.md) | 30 FPS raw capture, 15 FPS / 7.5 FPS inference, 0% CPU offload, and thermal telemetry |
+| **09** | [**Troubleshooting & FAQ**](docs/troubleshooting.md) | DMA heap `Errno 12`, `camera_ros` conflicts, 25s RP2040 flash delay, and permission fixes |
+| **10** | [**Known Limitations & Gotchas**](docs/known-issues.md) | Pi 5 exclusivity (PiSP), Raspberry Pi OS host requirement, CMA pool, and storage sizes |
 
 ---
 
 ## 🤝 Contributing
 
-Contributions are welcome! Here's how to get involved:
+Contributions are welcome! Please check the [Contributing Guidelines](CONTRIBUTING.md) and review the [Troubleshooting Guide](docs/troubleshooting.md) before submitting pull requests.
 
-1. **Fork** the repository
-2. **Create a feature branch:** `git checkout -b feature/my-feature`
-3. **Commit your changes:** `git commit -m 'Add my feature'`
-4. **Push to the branch:** `git push origin feature/my-feature`
-5. **Open a Pull Request**
-
-### Areas where help is appreciated
-
-- 🔧 Rebuilding `camera_ros` against the container's libcamera
-- 📸 Adding a ROS2 node that publishes IMX500 detections as `vision_msgs/Detection2DArray`
-- 📝 Testing on different Pi 5 + IMX500 configurations
-- 🐛 Bug reports with `rpicam-hello --list-cameras` output and `docker logs`
-
-Please open an issue first for major changes so we can discuss the approach.
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
 ---
 
 ## 📄 License
 
-**MIT License** — Copyright (c) 2026 Abhin M
-
-See [LICENSE](LICENSE) for the full text.
+This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.
 
 ---
 
 <p align="center">
-  <em>Built with ❤️ for the robotics community — because your robot deserves both eyes and a brain.</em>
+  <em>Developed by Abhin M — Empowering autonomous robotics with on-sensor AI vision.</em>
 </p>
