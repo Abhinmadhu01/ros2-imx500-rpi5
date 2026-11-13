@@ -139,9 +139,6 @@ picam2.stop()
 "
 ```
 
-> [!NOTE]
-> Replace `<username>` with your GitHub / Docker Hub username throughout this README.
-
 ---
 
 ## 📋 Prerequisites

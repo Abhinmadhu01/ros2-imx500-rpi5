@@ -37,7 +37,7 @@ x-common: &common
     - DISPLAY=${DISPLAY:-:0}
 
 services:
-  # ---------- Base image (slim — no torch/scipy/MAVProxy) ----------
+  # ---------- Base image (slim — ROS2 + libcamera + picamera2 + colcon) ----------
   ros2-imx500:
     <<: *common
     image: ros2-imx500-rpi5:base
@@ -46,6 +46,16 @@ services:
       dockerfile: Dockerfile
       target: base
     container_name: ros2-imx500
+
+  # ---------- UAV image (MAVROS + AprilTag + GStreamer RTMP) ----------
+  ros2-imx500-uav:
+    <<: *common
+    image: ros2-imx500-rpi5:uav
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: uav
+    container_name: ros2-imx500-uav
 
   # ---------- Full image (torch + ultralytics + MAVProxy + scipy) ----------
   ros2-imx500-full:
